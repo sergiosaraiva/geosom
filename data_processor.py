@@ -3,44 +3,52 @@ import rasterio
 from rasterio.transform import from_origin
 from rasterio.features import rasterize
 from scipy.ndimage import gaussian_filter
+import pandas as pd
 import geopandas as gpd
 import numpy as np
 from minisom import MiniSom
 
 class DataProcessor:
     @staticmethod
-    def run_som(input_file, som_output_file, attributes, sigma, learning_rate, som_x, som_y, num_iterations, target_crs, geo_weight):
+    def run_som(input_file, som_output_file, attributes, sigma=0.3, learning_rate=0.5, som_x=5, som_y=5, num_iteration=1000, target_crs=3763, geo_weight=1):
+        # Load and reproject the geometries
         gdf = gpd.read_file(input_file)
         gdf = gdf.to_crs(epsg=target_crs)
+        gdf['geometry'] = gdf['geometry'].simplify(tolerance=0.001, preserve_topology=True)
 
         # Calculate centroids and extract them as separate float columns
         gdf['centroid_lon'] = gdf.geometry.centroid.x
         gdf['centroid_lat'] = gdf.geometry.centroid.y
 
         # Append geographic coordinates to attributes for normalization and SOM processing
-        attributes = attributes + ['centroid_lon', 'centroid_lat']
-        data = gdf[attributes].to_numpy()
+        full_attributes = attributes + ['centroid_lon', 'centroid_lat']
+        data = gdf[full_attributes].to_numpy()
 
         # Normalize the data
         scaler = MinMaxScaler()
-        data = scaler.fit_transform(data)
-        data[:, -2:] *= geo_weight  # Apply geo_weight to longitude and latitude
+        data_normalized = scaler.fit_transform(data)
+        data_normalized[:, -2:] *= geo_weight  # Apply geo_weight to longitude and latitude
 
         # Initialize and train SOM
-        som = MiniSom(som_x, som_y, len(attributes), sigma=sigma, learning_rate=learning_rate)
-        som.train_random(data, num_iterations)
+        som = MiniSom(som_x, som_y, len(full_attributes), sigma=sigma, learning_rate=learning_rate)
+        som.train_random(data_normalized, num_iteration)
 
-        # Decompose tuple and store as separate columns for grid coordinates
-        winners = np.array([som.winner(d) for d in data])
-        gdf['cluster_x'] = winners[:, 0].astype(int)
-        gdf['cluster_y'] = winners[:, 1].astype(int)
-        gdf['cluster'] = gdf['cluster_x'] * som_y + gdf['cluster_y']  # Create a single numeric cluster ID
+        # Assign clusters using a unique integer for each (x, y) position
+        gdf['cluster'] = [x * som_y + y for x, y in (som.winner(d) for d in data_normalized)]
 
-        # Remove centroid columns if no longer needed
-        gdf.drop(columns=['centroid_lon', 'centroid_lat'], inplace=True)
+        # Create DataFrame for normalized data
+        normalized_df = pd.DataFrame(data_normalized, columns=full_attributes, index=gdf.index)
+        output_gdf = gdf[['geometry', 'cluster']].join(normalized_df)
 
-        # Save to file
-        gdf.to_file(som_output_file, driver='GPKG')
+        # Find and include the ID column if exists
+        id_column = next((col for col in gdf.columns if col.upper() in ['ID', 'OBJECTID', 'OBJECT_ID', 'FID']), None)
+        if id_column:
+            output_gdf[id_column] = gdf[id_column]
+
+        # Drop the '_normalized' suffix and save the output
+        output_gdf.columns = [col.replace('_normalized', '') for col in output_gdf.columns]
+        output_gdf.to_file(som_output_file, driver='GPKG')
+
 
     @staticmethod
     def convert_to_raster(gdf_or_file, raster_output_file, cell_size=0.5, max_cells=10000000):
@@ -97,6 +105,7 @@ class DataProcessor:
             dst.write(raster, 1)
 
         print(f"Raster created successfully with dimensions: {width} x {height}")
+
 
     @staticmethod
     def generate_heatmap(raster_input_file, heatmap_output_file, sigma=1):
