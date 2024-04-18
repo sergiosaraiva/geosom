@@ -1,31 +1,45 @@
-import geopandas as gpd
-import numpy as np  # Ensure numpy is imported
+from sklearn.preprocessing import MinMaxScaler
 import rasterio
-from rasterio.features import rasterize
 from rasterio.transform import from_origin
+from rasterio.features import rasterize
 from scipy.ndimage import gaussian_filter
+import geopandas as gpd
+import numpy as np
 from minisom import MiniSom
 
 class DataProcessor:
     @staticmethod
-    def run_som(input_file, som_output_file, attributes, sigma=0.3, learning_rate=0.5, som_x=5, som_y=5, num_iteration=1000, target_crs=3763):
-        # Load and simplify geometries
+    def run_som(input_file, som_output_file, attributes, sigma, learning_rate, som_x, som_y, num_iterations, target_crs, geo_weight):
         gdf = gpd.read_file(input_file)
         gdf = gdf.to_crs(epsg=target_crs)
-        gdf['geometry'] = gdf['geometry'].simplify(tolerance=0.001, preserve_topology=True)
 
-        # Normalize data for SOM
+        # Calculate centroids and extract them as separate float columns
+        gdf['centroid_lon'] = gdf.geometry.centroid.x
+        gdf['centroid_lat'] = gdf.geometry.centroid.y
+
+        # Append geographic coordinates to attributes for normalization and SOM processing
+        attributes = attributes + ['centroid_lon', 'centroid_lat']
         data = gdf[attributes].to_numpy()
-        data_normalized = (data - np.min(data, axis=0)) / (np.ptp(data, axis=0))
+
+        # Normalize the data
+        scaler = MinMaxScaler()
+        data = scaler.fit_transform(data)
+        data[:, -2:] *= geo_weight  # Apply geo_weight to longitude and latitude
 
         # Initialize and train SOM
         som = MiniSom(som_x, som_y, len(attributes), sigma=sigma, learning_rate=learning_rate)
-        som.train_random(data_normalized, num_iteration)
+        som.train_random(data, num_iterations)
 
-        # Assign clusters using a unique integer for each (x, y) position
-        gdf['cluster'] = [x * som_y + y for x, y in (som.winner(d) for d in data_normalized)]
+        # Decompose tuple and store as separate columns for grid coordinates
+        winners = np.array([som.winner(d) for d in data])
+        gdf['cluster_x'] = winners[:, 0].astype(int)
+        gdf['cluster_y'] = winners[:, 1].astype(int)
+        gdf['cluster'] = gdf['cluster_x'] * som_y + gdf['cluster_y']  # Create a single numeric cluster ID
 
-        # Save the GeoDataFrame with cluster assignments to a GeoPackage file
+        # Remove centroid columns if no longer needed
+        gdf.drop(columns=['centroid_lon', 'centroid_lat'], inplace=True)
+
+        # Save to file
         gdf.to_file(som_output_file, driver='GPKG')
 
     @staticmethod
@@ -37,7 +51,7 @@ class DataProcessor:
 
         bounds = gdf.total_bounds
         x_min, y_min, x_max, y_max = bounds
-        print(f"Bounds: x_min={x_min}, y_min={y_min}, x_max={x_max}, y_max={y_max}")
+        print(f"Initial Bounds: x_min={x_min}, y_min={y_min}, x_max={x_max}, y_max={y_max}")
 
         # Calculate initial raster dimensions
         width = int((x_max - x_min) / cell_size)
@@ -45,16 +59,16 @@ class DataProcessor:
 
         # Ensure dimensions are not zero
         if width == 0 or height == 0:
-            raise ValueError(f"Calculated width or height is zero. Try a smaller cell_size. Current cell_size: {cell_size}")
+            raise ValueError(f"Calculated width or height is zero with cell_size {cell_size}. Adjust cell size and retry.")
 
-        # Dynamic adjustment if necessary (optional)
+        # Dynamic adjustment if necessary
         while width * height > max_cells:
             cell_size *= 2  # Double the cell size to reduce the number of cells
             width = int((x_max - x_min) / cell_size)
             height = int((y_max - y_min) / cell_size)
-            if cell_size > max(x_max - x_min, y_max - y_min):
-                raise ValueError("Cell size too large, resulting in zero dimensions.")
             print(f"Adjusted cell_size to {cell_size} with dimensions {width} x {height}")
+            if cell_size > max(x_max - x_min, y_max - y_min):
+                raise ValueError("Adjusted cell size too large, resulting in zero dimensions.")
 
         transform = from_origin(x_min, y_max, cell_size, cell_size)
 
