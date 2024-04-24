@@ -1,145 +1,69 @@
-## **Exploring the Code Behind Clustering Lisbon's Geographic Data with SOMs**
+### Detailed Explanation of the GeoSom Class for Geospatial Data Analysis
 
-### **Introduction**
+#### Introduction
+The GeoSom class harnesses the capabilities of Self-Organizing Maps (SOMs) to perform clustering on geospatial data. This technical note elaborates on the class architecture, functionalities, specific parameters received by each method, and the interplay between the algorithm and geographic data.
 
-Self-Organizing Maps (SOMs) are a potent tool in machine learning for managing and visualizing complex data. This article details the source code used in a Python-based project aimed at clustering the Lisbon Metropolitan Area's population data. This example demonstrates how SOMs can be practically applied to understand urban demographics.
+#### Architecture Overview
+GeoSom is crafted in Python, integrating multiple libraries crucial for geospatial data handling and analysis:
 
-### **Overview of the Project Structure**
+- **GeoPandas**: Manages geospatial data operations.
+- **MiniSom**: Provides the core functionality for creating and training Self-Organizing Maps.
+- **Scikit-learn**: Utilized for data normalization.
+- **Rasterio**: Aids in raster data creation and manipulation.
+- **Numpy and Pandas**: Support extensive data manipulations and operations.
 
-The project is structured into two main Python scripts:
+#### Key Functionalities and Parameter Explanations
 
-- `main.py`: This script handles the user interface, command-line arguments, and orchestrates the flow of data through various processing stages.
-- `data_processor.py`: This script contains all the logic for data handling, including loading data, running the SOM, converting the results to a raster format, and generating heatmaps.
+1. **Loading and Preprocessing Data**
+   - **Method**: `run`
+   - **Purpose**: Loads geospatial data, processes it for SOM training, and outputs clustered data.
+   - **Parameters**:
+     - `input_file`: Path to the input GPKG containing geospatial data.
+     - `som_output_file`: Destination path for the output GPKG that will contain clustering results.
+     - `attributes`: List of attribute names from the input data to include in the analysis.
+     - `sigma`: The sigma parameter for the SOM, controlling the spread of the neighborhood function, typically impacting how broadly data influences the SOM's training.
+     - `learning_rate`: The rate at which the SOM learns; a higher rate may lead to quicker convergence but might skip optimal solutions.
+     - `som_x`, `som_y`: Dimensions of the SOM grid. Determines the granularity of clustering.
+     - `num_iterations`: The number of iterations over the training dataset to perform during SOM training.
+     - `target_crs`: The EPSG code for the coordinate reference system to which the data will be projected.
+     - `geo_weight`: The weight applied to geographic coordinates during normalization to balance their influence relative to other attributes.
 
-### **Breakdown of the `main.py` Script**
+   - **Geographic Data Specifics**: This method projects geospatial data into a common CRS to ensure spatial calculations are accurate. It also extracts centroids from geometries, treating geographic locations as integral attributes for SOM training, which helps in forming clusters based on both attribute similarity and spatial proximity.
 
-#### **Import Statements and Argument Parsing**
+2. **Rasterization of Clustered Data**
+   - **Method**: `to_raster`
+   - **Purpose**: Transforms clustered geospatial data into a raster format.
+   - **Parameters**:
+     - `gdf_or_file`: Either a GeoDataFrame or a path to a GPKG file containing clustered data.
+     - `raster_output_file`: Path for the output raster file.
+     - `cell_size`: Defines the spatial resolution of the raster; smaller cell sizes create more detailed rasters but increase file size and processing time.
+     - `max_cells`: Maximum allowable number of cells in the raster to prevent excessive file sizes.
 
+   - **Geographic Data Specifics**: The rasterization process converts vector-based clusters into a grid-based raster format, suitable for GIS applications and further spatial analysis like overlay operations.
+
+3. **Heatmap Generation**
+   - **Method**: `to_heatmap`
+   - **Purpose**: Creates a heatmap from a raster file to visualize data density and clustering intensity.
+   - **Parameters**:
+     - `raster_input_file`: The raster file created by `to_raster`.
+     - `heatmap_output_file`: Destination path for the output heatmap file.
+     - `sigma`: The standard deviation for the Gaussian filter, affecting the smoothness and spread of the heatmap.
+
+   - **Geographic Data Specifics**: The heatmap effectively visualizes the spatial distribution of clusters, highlighting areas of high density or intensity, which can be crucial for identifying hotspots or patterns in geographic data.
+
+#### Usage Example
 ```python
-import sys
-import argparse
-from data_processor import DataProcessor
+from geosom import GeoSom
 
-def main():
-    parser = argparse.ArgumentParser(description='Process geospatial data using a Self-Organizing Map (SOM).')
-    # Various argument definitions
-    args = parser.parse_args()
+# Initialize parameters and run GeoSom
+input_file = 'path/to/data.gpkg'
+attributes = ['population_density', 'income']
+GeoSom.run(input_file, 'output/path/clusters.gpkg', attributes, sigma=0.5, learning_rate=0.1, som_x=20, som_y=20, num_iterations=500, target_crs=4326, geo_weight=0.8)
 
-    # Calls to data processing functions
+# Generate raster and heatmap from clustered data
+GeoSom.to_raster('output/path/clusters.gpkg', 'output/path/raster.tif', cell_size=0.001)
+GeoSom.to_heatmap('output/path/raster.tif', 'output/path/heatmap.tif', sigma=1)
 ```
 
-- **Purpose**: `main.py` starts by importing necessary libraries and defining a function `main()` that uses `argparse` to handle command-line arguments.
-- **Functionality**: The script configures what inputs it requires, such as paths to data files, configuration for the SOM, and where to save outputs.
-
-#### **Data Processing Calls**
-
-```python
-    DataProcessor.run_som(args.input_file, clusters_output_file, args.attributes, args.sigma, args.cell_size, args.som_x, args.som_y, args.num_iterations, args.crs)
-    DataProcessor.convert_to_raster(clusters_output_file, raster_output_file, args.cell_size)
-    DataProcessor.generate_heatmap(raster_output_file, heatmap_output_file, args.sigma)
-```
-
-- **Execution**: After parsing input parameters, `main.py` calls methods from `data_processor.py` to execute data loading, SOM processing, rasterization, and heatmap generation.
-
-### **Details of the `data_processor.py` Script**
-
-The `DataProcessor` class is designed to function as a utility class that provides static methods for handling different stages of data processing. This includes reading and preparing geospatial data, executing the SOM algorithm, transforming the resulting clusters into a raster format, and generating heatmaps from these rasters.
-
-### Breakdown of Methods
-
-#### 1. **run_som**
-This method is the core of the geographic data analysis, applying the Self-Organizing Map to the input data to identify clusters based on various attributes.
-
-```python
-@staticmethod
-def run_som(input_file, som_output_file, attributes, sigma, learning_rate, som_x, som_y, num_iterations, target_crs):
-    import geopandas as gpd
-    import numpy as np
-    from minisom import MiniSom
-
-    # Load data
-    gdf = gpd.read_file(input_file)
-    gdf = gdf.to_crs(epsg=target_crs)  # Convert CRS
-
-    # Select attributes and normalize data
-    data = gdf[attributes].to_numpy()
-    data_normalized = (data - np.min(data, axis=0)) / (np.ptp(data, axis=0))
-
-    # Initialize SOM
-    som = MiniSom(som_x, som_y, len(attributes), sigma=sigma, learning_rate=learning_rate)
-    som.train_random(data_normalized, num_iterations)
-
-    # Tagging data with clusters
-    gdf['cluster'] = [som.winner(d) for d in data_normalized]
-    gdf.to_file(som_output_file, driver='GPKG')
-```
-
-- **Functionality**: The method starts by loading geospatial data using GeoPandas, then it normalizes the selected attributes to ensure effective learning. It initializes a SOM with the specified parameters, trains it with the normalized data, and assigns each data point to a cluster. Finally, it saves the clustered data back to a GeoPackage file.
-
-#### 2. **convert_to_raster**
-This method converts the clustered geospatial data into a raster format, which is useful for visual representation and further analysis.
-
-```python
-@staticmethod
-def convert_to_raster(gdf_or_file, raster_output_file, cell_size):
-    import geopandas as gpd
-    import rasterio
-    from rasterio.features import rasterize
-    from rasterio.transform import from_origin
-
-    # Load GeoDataFrame if a file path is provided
-    if isinstance(gdf_or_file, str):
-        gdf = gpd.read_file(gdf_or_file)
-    else:
-        gdf = gdf_or_file
-
-    # Setup raster parameters
-    bounds = gdf.total_bounds
-    transform = from_origin(bounds[0], bounds[3], cell_size, cell_size)
-    raster_shape = (int((bounds[3] - bounds[1]) / cell_size), int((bounds[2] - bounds[0]) / cell_size))
-
-    # Rasterization
-    raster = rasterize(
-        [(shape, value) for shape, value in zip(gdf.geometry, gdf['cluster'])],
-        out_shape=raster_shape,
-        transform=transform,
-        fill=0,
-        all_touched=True,
-        dtype='int32'
-    )
-
-    # Saving raster
-    with rasterio.open(raster_output_file, 'w', driver='GTiff', height=raster_shape[0], width=raster_shape[1], count=1, dtype='int32', crs=gdf.crs, transform=transform) as dst:
-        dst.write(raster, 1)
-```
-
-- **Functionality**: It checks whether the input is a file path or a GeoDataFrame, configures the raster transformation, and performs the rasterization using `rasterio`. It defines the spatial resolution and dimensions of the raster based on the `cell_size` and geographical bounds.
-
-#### 3. **generate_heatmap**
-This method applies a Gaussian filter to the raster data to produce a heatmap, which can be used to visually analyze the density and distribution of the clusters.
-
-```python
-@staticmethod
-def generate_heatmap(raster_input_file, heatmap_output_file, sigma):
-    import rasterio
-    from scipy.ndimage import gaussian_filter
-
-    # Load raster
-    with rasterio.open(raster_input_file) as src:
-        raster = src.read(1)  # read the first band
-
-    # Apply Gaussian filter
-    heatmap = gaussian_filter(raster, sigma=sigma)
-
-    # Save the heatmap
-    with rasterio.open(heatmap_output_file,
-
- 'w', driver='GTiff', height=src.height, width=src.width, count=1, dtype='float32', crs=src.crs, transform=src.transform) as dst:
-        dst.write(heatmap.astype('float32'), 1)
-```
-
-- **Functionality**: The method loads a raster file, applies a Gaussian blur to smooth it, and saves the result as a new raster. This is useful for creating visual representations that highlight larger trends in the data rather than individual data points.
-
-### Conclusion
-
-The `DataProcessor` class efficiently encapsulates all necessary functionalities for processing geographic data through SOMs, from data preparation to advanced visual output. Each method is designed to be modular, allowing them to be reused or adapted for different datasets or different types of analyses. This design not only streamlines the project workflow but also enhances the usability and extendibility of the code.
+#### Conclusion
+The GeoSom class offers a comprehensive approach to integrating geospatial analysis with Self-Organizing Maps. By effectively managing the influence of geographic coordinates alongside other attributes, it provides a nuanced tool for clustering and visualizing geospatial data, making it highly valuable for various applications in GIS and spatial data analysis.
