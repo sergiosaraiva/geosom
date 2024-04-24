@@ -6,7 +6,9 @@ The GeoSom class provides a sophisticated framework for applying Self-Organizing
 #### 1. Algorithmic Enhancements
 
 **1.1 Adaptive Learning Rates**
+
 Improve the SOM training process by dynamically adjusting the learning rate, enhancing the convergence rate and stability.
+
   ```python
   from minisom import MiniSom
 
@@ -27,7 +29,9 @@ Improve the SOM training process by dynamically adjusting the learning rate, enh
   ```
 
 **1.2 Hybrid Clustering Techniques**
+
 Enhance cluster resolution by combining SOMs with secondary clustering methods such as KMeans or DBSCAN.
+
   ```python
   from sklearn.cluster import KMeans
   from minisom import MiniSom
@@ -46,7 +50,9 @@ Enhance cluster resolution by combining SOMs with secondary clustering methods s
   ```
 
 **1.3 Circular SOMs**
+
 Accommodate data with circular continuity (e.g., longitudes) using toroidal topologies.
+
   ```python
   from minisom import MiniSom
 
@@ -58,7 +64,9 @@ Accommodate data with circular continuity (e.g., longitudes) using toroidal topo
 #### 2. Data Handling Improvements
 
 **2.1 Handling of Missing Data**
+
 Enhance data robustness by addressing missing values within datasets prior to SOM training.
+
   ```python
   from sklearn.impute import SimpleImputer
   import pandas as pd
@@ -74,7 +82,9 @@ Enhance data robustness by addressing missing values within datasets prior to SO
   ```
 
 **2.2 Incremental Data Loading**
+
 Enable processing of large datasets that do not fit into memory by loading and processing data in batches.
+
   ```python
   from minisom import MiniSom
   import pandas as pd
