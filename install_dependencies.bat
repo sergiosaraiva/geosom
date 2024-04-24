@@ -12,6 +12,7 @@ pip install --upgrade rasterio
 pip install --upgrade scipy
 pip install --upgrade minisom
 pip install --upgrade scikit-learn
+pip install --upgrade matplotlib
 
 echo All dependencies are installed/updated successfully.
 pause

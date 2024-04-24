@@ -1,6 +1,6 @@
 import sys
 import argparse
-from data_processor import DataProcessor
+from geosom import GeoSom
 
 def split_comma_separated(string):
     return string.split(',')
@@ -23,9 +23,9 @@ def main():
     raster_output_file = f"{args.output_base}.raster.tif"
     heatmap_output_file = f"{args.output_base}.heatmap.tif"
 
-    DataProcessor.run_som(args.input_file, clusters_output_file, args.attributes, args.sigma, args.cell_size, args.som_x, args.som_y, args.num_iterations, args.crs, args.geo_weight)
-    DataProcessor.convert_to_raster(clusters_output_file, raster_output_file, args.cell_size)
-    DataProcessor.generate_heatmap(raster_output_file, heatmap_output_file, args.sigma)
+    GeoSom.run(args.input_file, clusters_output_file, args.attributes, args.sigma, args.cell_size, args.som_x, args.som_y, args.num_iterations, args.crs, args.geo_weight)
+    GeoSom.to_raster(clusters_output_file, raster_output_file, args.cell_size)
+    GeoSom.to_heatmap(raster_output_file, heatmap_output_file, args.sigma)
 
     print(f"Process completed successfully. Output files saved with base name {args.output_base}")
 

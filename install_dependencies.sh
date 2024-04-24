@@ -8,6 +8,7 @@ dependencies=(
     "scipy"
     "minisom"
 	"scikit-learn"
+	"matplotlib"
 )
 
 # Update pip to the latest version
