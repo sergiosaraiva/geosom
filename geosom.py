@@ -116,7 +116,11 @@ class GeoSom:
 
         heatmap = gaussian_filter(raster, sigma=sigma)
         heatmap[heatmap < 0] = -1
+
+        # Round the values in the heatmap array to 2 decimal places
+        heatmap_rounded = np.round(heatmap, decimals=2)
+        
         meta.update(dtype='float32', compress='lzw')
 
         with rasterio.open(heatmap_output_file, 'w', **meta) as dst:
-            dst.write(heatmap, 1)
+            dst.write(heatmap_rounded, 1)
