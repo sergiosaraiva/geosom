@@ -1,53 +1,31 @@
-## **Mapping Population Patterns in Lisbon: A Self-Organizing Map Approach**
+### Utilizing Self-Organizing Maps for Enhanced Geospatial Data Analysis in Geographic Information Systems
 
-### **Introduction**
+#### Abstract
+This paper presents a novel approach to geospatial data analysis using Self-Organizing Maps (SOMs), integrated within a Python-based class, GeoSom, designed to process and visualize geographic data from GeoPackage files. By combining attribute similarity with geographic proximity in its clustering methodology, our approach facilitates more nuanced insights into spatial data, enhancing applications in urban planning, environmental monitoring, and socio-demographic analysis. This paper details the implementation of the GeoSom class, explores its utility in geospatial analysis, and demonstrates how it leverages popular libraries for processing, machine learning, and visualization.
 
-In the evolving field of urban planning and demographic analysis, the complexity of population data often requires advanced analytical techniques. Among these, Self-Organizing Maps (SOM) stand out as a powerful tool for visualizing and interpreting large datasets. This article explores the application of SOM to identify and analyze population clusters in the Lisbon Metropolitan Area, providing insights that can significantly influence urban development and policy-making.
+#### 1. Introduction
+Self-Organizing Maps (SOMs), introduced by Teuvo Kohonen in the 1980s, are a type of artificial neural network that is trained using unsupervised learning to produce a low-dimensional, discretized representation of input data. This technique preserves the topological properties of the original high-dimensional data and is particularly useful for visualizing and interpreting complex datasets. The application of SOMs to geospatial data enables the clustering of spatial entities not only based on their attributes but also their geographic locations, thereby supporting the generation of spatially contiguous clusters that are critical in many geographic information systems (GIS) applications.
 
-### **Background**
+#### 2. Methodology
+The methodology section covers the implementation details of the GeoSom class which provides a comprehensive framework for the application of SOMs to geospatial data stored in GeoPackage (GPKG) files.
 
-#### **Self-Organizing Maps (SOM)**
+**2.1 Data Loading and Preprocessing**
+GeoSom utilizes GeoPandas for reading and projecting geographic data to a suitable coordinate reference system (CRS). The geometries' centroids are computed to integrate geographic coordinates into the SOM analysis alongside user-defined attributes. Data normalization is performed using the MinMaxScaler from Scikit-Learn, enhancing the uniformity and accuracy of SOM training.
 
-Self-Organizing Maps are a type of unsupervised learning algorithm developed by Teuvo Kohonen in the 1980s. They are used to reduce the dimensionality of data, preserving the topological properties of the original dataset. This makes SOM particularly useful for complex geographic data, as it can highlight patterns and similarities hidden within large datasets, making them accessible and understandable.
+**2.2 SOM Implementation**
+The SOM is implemented using the MiniSom library. The training process involves adjusting weights iteratively to match the input vectors, which, in this case, include both attribute values and geographic coordinates. The output is a set of clusters that represent the data’s structure in a two-dimensional grid format.
 
-#### **Importance of Geographic Clustering**
+**2.3 Output Generation**
+The clustered data is stored back into a GPKG file, alongside additional outputs including raster files for GIS applications and heatmaps for visual analysis. These outputs are generated using Rasterio, facilitating the conversion of clustered data into raster format and applying Gaussian filters to produce heatmaps.
 
-Geographic clustering involves grouping sets of objects in such a way that objects in the same group (or cluster) are more similar to each other than to those in other groups. In urban planning, such clustering can help identify areas with similar demographic characteristics, socioeconomic statuses, or developmental needs, facilitating more targeted policy and resource allocation.
+#### 3. Results and Discussion
+The application of the GeoSom class was tested on a dataset containing socio-demographic and environmental data for a metropolitan area. The results demonstrated that the GeoSom class effectively identified spatial patterns that were not apparent through traditional clustering methods. Clusters formed by the GeoSom closely corresponded to known geographic and demographic boundaries, validating the efficacy of integrating geographic coordinates into SOM analysis.
 
-### **Methodology**
+#### 4. Conclusion
+The GeoSom class represents a significant advancement in the field of geospatial data analysis. By facilitating the integration of SOMs with geographic data processing, GeoSom allows for more sophisticated analysis and visualization of spatial data. This approach is particularly beneficial for applications requiring the interpretation of complex spatial patterns and can serve as a foundation for further research and development in geographic data analysis.
 
-#### **Data Collection**
-
-The study utilizes demographic data from various sources that detail attributes like housing, family nuclei, and individual age groups across the Lisbon Metropolitan Area. This data underwent cleaning and preprocessing to ensure accuracy and relevance to the study's goals.
-
-#### **SOM Configuration**
-
-The SOM was configured with a grid size of 100x100 to ensure detailed clustering, with a total of 1,000 iterations to allow adequate training. Key parameters included a sigma of 1.5 to moderate the neighborhood function's spread and a learning rate optimized for convergence stability.
-
-#### **Implementation**
-
-Python, supplemented by libraries such as GeoPandas for geospatial data manipulation and MiniSom for the implementation of the Self-Organizing Map, was used to execute the analysis. Key segments of the code involved data normalization, training the SOM, and mapping the high-dimensional data to a two-dimensional grid.
-
-### **Results**
-
-#### **Cluster Analysis**
-
-The SOM identified several distinct clusters within the Lisbon Metropolitan Area, each representing unique demographic and socioeconomic characteristics. For instance, some clusters were characterized by a higher concentration of younger populations and rental housing, while others showed a prevalence of older populations and owned homes.
-
-#### **Interpretation of Results**
-
-The clustering provided a nuanced understanding of the region's urban dynamics, revealing areas of potential demographic stress or growth. These insights are crucial for urban planners and local government officials focusing on targeted development initiatives.
-
-### **Discussion**
-
-#### **Implications of Findings**
-
-The study’s findings offer a roadmap for more informed decision-making in urban development. By understanding where certain demographic and socioeconomic traits cluster geographically, policymakers can better allocate resources, plan public services, and initiate community projects.
-
-#### **Limitations and Challenges**
-
-While the results are compelling, they come with limitations, including potential biases in data collection and the inherent simplifications made by the SOM. Future research could expand the model’s complexity or integrate additional data sources to refine these findings.
-
-### **Conclusion**
-
-The use of Self-Organizing Maps in analyzing the Lisbon Metropolitan Area’s population data has demonstrated significant potential to aid in urban planning and development. This approach not only provides a clear visualization of complex datasets but also reveals deeper insights into population patterns that are critical for effective policy-making and urban management.
+#### References
+1. Kohonen, T. (1982). Self-organized formation of topologically correct feature maps. Biological Cybernetics, 43(1), 59-69.
+2. Scikit-Learn Library. (n.d.). MinMaxScaler. Retrieved from https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MinMaxScaler.html
+3. Rasterio Documentation. (n.d.). Retrieved from https://rasterio.readthedocs.io/en/latest/
+4. MiniSom Library. (n.d.). Retrieved from https://github.com/JustGlowing/minisom
