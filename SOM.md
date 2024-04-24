@@ -10,19 +10,19 @@ A Self-Organizing Map is a type of artificial neural network that is trained usi
 
 #### **How Does a SOM Work?**
 
-##### **Initialization**
+##### **1. Initialization**
 
 A SOM consists of neurons arranged in a grid (usually one or two dimensions). Each neuron in this grid is initially assigned a random weight vector, where the dimensionality matches that of the input data.
 
-##### **Competition**
+##### **2. Competition**
 
 During training, each piece of input data is compared to all the weight vectors in the grid. The neuron whose weight vector is most similar to the input (usually measured using Euclidean distance) is declared the winning neuron. This neuron is often referred to as the Best Matching Unit (BMU).
 
-##### **Cooperation**
+##### **3. Cooperation**
 
 The BMU then defines the center of a neighborhood of neurons that will also be adjusted, with the size of the neighborhood decreasing over time. This neighborhood function typically has a Gaussian shape in the grid space.
 
-##### **Adaptation**
+##### **4. Adaptation**
 
 Weights of the BMU and its neighbors are adjusted to move closer to the input vector in the data space. The learning rate, which also decreases over time, determines the degree of movement. This process is repeated for each input vector for a number of iterations.
 
